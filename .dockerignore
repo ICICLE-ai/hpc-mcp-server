@@ -1,15 +1,35 @@
+# Version control / CI
 .git
+.gitignore
 .github
+
+# Python virtualenvs and caches
 .venv
+venv
 __pycache__
 *.py[cod]
 *.egg-info
 .pytest_cache
 .mypy_cache
 .ruff_cache
-kernel.errors.txt
+
+# Docker
 Dockerfile
+.dockerignore
+
+# Local env / secrets
+.env
+.env.*
+!.env.example
+
+# Model weights and caches (provided at runtime via mounts)
 models
 .cache
 *.safetensors
 *.bin
+*.pt
+*.gguf
+
+# Misc local artifacts
+kernel.errors.txt
+*.log
