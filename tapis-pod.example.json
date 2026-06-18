@@ -1,0 +1,36 @@
+{
+  "pod_id": "hpcmcpservercpu",
+  "description": "HPC MCP server",
+  "command": [],
+  "image": "ghcr.io/icicle-ai/hpc-mcp-server:cpu",
+  "environment_variables": {
+    "PORT": "8000",
+    "LLM_BACKEND": "transformers",
+    "MODEL_ID": "Qwen/Qwen2.5-0.5B-Instruct",
+    "HF_HOME": "/models/.cache/huggingface",
+    "HF_LOCAL_FILES_ONLY": "false",
+    "TORCH_DTYPE": "float32",
+    "ESTIMATOR_DIR": "/app/vendor/distributed_training_estimator/Estimator",
+    "GPU_MODEL_TIMEOUT_SECONDS": "300"
+  },
+  "volume_mounts": {
+    "/models": {
+      "type": "tapisvolume",
+      "source_id": "hpcmcpservercpu-models"
+    }
+  },
+  "template_overrides": {},
+  "networking": {
+    "default": {
+      "protocol": "http",
+      "port": 8000
+    }
+  },
+  "resources": {
+    "cpu_request": "4000",
+    "cpu_limit": "8000",
+    "mem_request": "16000",
+    "mem_limit": "32000",
+    "gpus": "0"
+  }
+}

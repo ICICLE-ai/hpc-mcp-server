@@ -1,0 +1,14 @@
+schema-version: 1
+
+service-name: hpc-mcp-server-cpu
+service-version: 0.1.0
+project-name: hpc-mcp-server-cpu
+service-type: ai
+pod-name: hpcmcpservercpu
+
+runtime-type: python
+runtime-version: "3.11"
+
+build-apt-packages:
+  - build-essential
+runtime-apt-packages: []
