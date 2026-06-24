@@ -21,13 +21,10 @@ dependencies = [
 ]
 
 [project.scripts]
-hpc-mcp-server-cpu = "hpc_mcp_server.main:run"
+hpc-mcp-server-cpu = "hpc_mcp_server_cpu.main:run"
 
 [tool.uv.sources]
 torch = { index = "pytorch-cpu" }
-
-[tool.uv.build-backend]
-module-name = "hpc_mcp_server"
 
 [[tool.uv.index]]
 name = "pytorch-cpu"

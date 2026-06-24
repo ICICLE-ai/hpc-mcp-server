@@ -2,7 +2,7 @@
   "pod_id": "hpcmcpservercpu",
   "description": "HPC MCP server",
   "command": [],
-  "image": "ghcr.io/icicle-ai/hpc-mcp-server:cpu",
+  "image": "ghcr.io/icicle-ai/hpc-mcp-server-cpu:0.1.0",
   "environment_variables": {
     "PORT": "8000",
     "LLM_BACKEND": "transformers",
