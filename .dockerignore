@@ -41,7 +41,6 @@ dist
 build
 *.log
 logs
-docs
 *.md
 !README.md
 *.ipynb

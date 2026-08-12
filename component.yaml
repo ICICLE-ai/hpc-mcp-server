@@ -1,0 +1,69 @@
+schema_version: "0.1"
+name: hpc-mcp-server-cpu
+title: "HPC-MCP: LLM-Assisted HPC Utility Server"
+version: "0.1.0"
+type: service
+category: AI-as-a-Service
+status: testing
+description: "An MCP server that lets HPC users access LLM-assisted tools through natural language."
+
+repository:
+  url: "https://github.com/ICICLE-ai/hpc-mcp-server"
+  branch: cpu
+
+container:
+  image: "ghcr.io/icicle-ai/hpc-mcp-server-cpu:0.1.0"
+  architecture: linux/amd64
+
+deployment:
+  platform: "ICICLE Tapis Pods"
+  pod_id: hpcmcpservercpu
+  base_url: "https://hpcmcpservercpu.pods.icicleai.tapis.io"
+  mcp_endpoint: "https://hpcmcpservercpu.pods.icicleai.tapis.io/mcp/"
+
+runtime:
+  language: Python
+  python_version: "3.11"
+  frameworks:
+    - FastAPI
+    - Uvicorn
+    - MCP Python SDK
+    - Transformers
+
+features:
+  - "LLM chat endpoint"
+  - "MCP Streamable HTTP endpoint"
+  - "Distributed training-time prediction for Vista"
+  - "Distributed training-time prediction for Perlmutter"
+
+api:
+  openapi_spec: docs/openapi.json
+  endpoints:
+    - method: GET
+      path: /health
+      description: "Service health check."
+    - method: GET
+      path: /
+      description: "Service metadata."
+    - method: GET
+      path: /about
+      description: "HTML overview page."
+    - method: POST
+      path: /chat
+      description: "LLM chat endpoint with tool routing."
+    - method: POST
+      path: /predict-gpu-time
+      description: "Direct distributed training-time prediction endpoint."
+    - method: POST
+      path: /mcp/
+      description: "MCP Streamable HTTP endpoint."
+
+auth:
+  application_level_auth: false
+  notes: "The current test deployment does not add application-level auth inside the service."
+
+contact:
+  name: "Molang Wu"
+  affiliation: "Rutgers University"
+
+license: TBD

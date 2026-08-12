@@ -1,6 +1,6 @@
 {
   "pod_id": "hpcmcpservercpu",
-  "description": "HPC MCP server",
+  "description": "HPC-MCP: LLM-assisted HPC utility server",
   "command": [],
   "image": "ghcr.io/icicle-ai/hpc-mcp-server-cpu:0.1.0",
   "environment_variables": {
@@ -29,8 +29,8 @@
   "resources": {
     "cpu_request": "4000",
     "cpu_limit": "8000",
-    "mem_request": "16000",
-    "mem_limit": "32000",
+    "mem_request": "8000",
+    "mem_limit": "15000",
     "gpus": "0"
   }
 }

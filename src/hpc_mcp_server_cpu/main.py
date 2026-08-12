@@ -8,6 +8,7 @@ import sys
 from threading import Lock
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
@@ -78,6 +79,18 @@ class ServiceInfo(BaseModel):
     endpoints: dict[str, str]
     model_id: str
     llm_backend: str
+
+
+def _about_page_path() -> Path:
+    candidates = [
+        Path.cwd() / "docs" / "hpc-mcp-server.html",
+        Path("/app/docs/hpc-mcp-server.html"),
+        APP_ROOT / "docs" / "hpc-mcp-server.html",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
 
 
 def get_backend() -> LLMBackend:
@@ -302,6 +315,7 @@ def service_info() -> ServiceInfo:
         service=SERVICE_NAME,
         endpoints={
             "health": "GET /health",
+            "about": "GET /about",
             "chat": "POST /chat",
             "predict_gpu_time": "POST /predict-gpu-time",
             "mcp": "/mcp",
@@ -309,6 +323,14 @@ def service_info() -> ServiceInfo:
         model_id=os.environ.get("MODEL_ID", "Qwen/Qwen2.5-0.5B-Instruct"),
         llm_backend=os.environ.get("LLM_BACKEND", "transformers"),
     )
+
+
+@app.get("/about", response_class=HTMLResponse)
+def about_page() -> HTMLResponse:
+    page_path = _about_page_path()
+    if not page_path.exists():
+        raise HTTPException(status_code=404, detail="About page not found")
+    return HTMLResponse(page_path.read_text(encoding="utf-8"))
 
 
 @app.post("/chat", response_model=ChatResponse)
