@@ -1,35 +1,57 @@
-# Version control / CI
 .git
 .gitignore
+.gitattributes
 .github
-
-# Python virtualenvs and caches
 .venv
 venv
+env
 __pycache__
 *.py[cod]
+*$py.class
+*.so
+*.egg
 *.egg-info
 .pytest_cache
 .mypy_cache
 .ruff_cache
-
-# Docker
-Dockerfile
-.dockerignore
-
-# Local env / secrets
+.coverage
+.coverage.*
+htmlcov
+.tox
+.nox
 .env
 .env.*
 !.env.example
-
-# Model weights and caches (provided at runtime via mounts)
+*.pem
+*.key
+*.crt
+*.p12
+secrets
+.secrets
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+kernel.errors.txt
+Dockerfile
+dist
+build
+*.log
+logs
+*.md
+!README.md
+*.ipynb
+.ipynb_checkpoints
+data
+*.csv
+!vendor/distributed_training_estimator/Estimator/**/*.csv
+*.parquet
+*.h5
+*.hdf5
 models
 .cache
 *.safetensors
 *.bin
-*.pt
-*.gguf
-
-# Misc local artifacts
-kernel.errors.txt
-*.log

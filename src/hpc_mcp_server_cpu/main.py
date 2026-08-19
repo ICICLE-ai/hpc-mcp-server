@@ -8,15 +8,16 @@ import sys
 from threading import Lock
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from pydantic import BaseModel, Field
 
-from hpc_mcp_server.api.health import router as health_router
-from hpc_mcp_server.llama_backend import LLMBackend, build_backend
+from hpc_mcp_server_cpu.api.health import router as health_router
+from hpc_mcp_server_cpu.llama_backend import LLMBackend, build_backend
 
-SERVICE_NAME = "hpc-mcp-server"
+SERVICE_NAME = "hpc-mcp-server-cpu"
 APP_ROOT = Path(__file__).resolve().parents[2]
-GPU_MODEL_SCRIPT = os.environ.get("GPU_MODEL_SCRIPT")
 ESTIMATOR_DIR = Path(
     os.environ.get(
         "ESTIMATOR_DIR",
@@ -31,6 +32,18 @@ ESTIMATOR_CONFIGS = {
     "permultter": "llemma_7b_4_2_2_P.yml",
     "p": "llemma_7b_4_2_2_P.yml",
 }
+
+MCP_PUBLIC_HOST = os.environ.get(
+    "MCP_PUBLIC_HOST",
+    "hpcmcpservercpu.pods.icicleai.tapis.io",
+)
+
+
+def _comma_separated_setting(name: str, defaults: list[str]) -> list[str]:
+    value = os.environ.get(name)
+    if value is None:
+        return defaults
+    return [item.strip() for item in value.split(",") if item.strip()]
 
 
 def _find_estimator_dir() -> Path:
@@ -54,7 +67,34 @@ def _find_estimator_dir() -> Path:
     return candidates[0]
 
 
-mcp = FastMCP("ExecutionAwareLLM")
+mcp = FastMCP(
+    "ExecutionAwareLLM",
+    # This child app is mounted at /mcp, so its endpoint must be at the child
+    # root. Otherwise the externally visible path becomes /mcp/mcp.
+    streamable_http_path="/",
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=_comma_separated_setting(
+            "MCP_ALLOWED_HOSTS",
+            [
+                MCP_PUBLIC_HOST,
+                f"{MCP_PUBLIC_HOST}:*",
+                "127.0.0.1:*",
+                "localhost:*",
+                "[::1]:*",
+            ],
+        ),
+        allowed_origins=_comma_separated_setting(
+            "MCP_ALLOWED_ORIGINS",
+            [
+                f"https://{MCP_PUBLIC_HOST}",
+                "http://127.0.0.1:*",
+                "http://localhost:*",
+                "http://[::1]:*",
+            ],
+        ),
+    ),
+)
 _backend: LLMBackend | None = None
 _backend_lock = Lock()
 
@@ -81,6 +121,18 @@ class ServiceInfo(BaseModel):
     llm_backend: str
 
 
+def _about_page_path() -> Path:
+    candidates = [
+        Path.cwd() / "docs" / "hpc-mcp-server.html",
+        Path("/app/docs/hpc-mcp-server.html"),
+        APP_ROOT / "docs" / "hpc-mcp-server.html",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
+
+
 def get_backend() -> LLMBackend:
     global _backend
     if _backend is None:
@@ -91,28 +143,13 @@ def get_backend() -> LLMBackend:
 
 
 class GpuTimePredictionRequest(BaseModel):
-    system: str = Field(
-        "vista",
-        description="Target system. Supported values include vista and perlmutter.",
-    )
-    config_name: str | None = Field(
-        None,
-        description="Optional config file name under Estimator/target_config.",
-    )
+    system: str = "vista"
+    config_name: str | None = None
 
 
 def _normalize_gpu_system(system: str | None) -> str:
     normalized = (system or "vista").strip().lower()
     return "perlmutter" if normalized in {"perlmutter", "permutter", "permultter", "p"} else "vista"
-
-
-def _select_gpu_system_from_prompt(prompt: str) -> str:
-    lower_prompt = prompt.lower()
-    if any(name in lower_prompt for name in ("perlmutter", "permutter", "permultter")):
-        return "perlmutter"
-    if "vista" in lower_prompt:
-        return "vista"
-    return os.environ.get("DEFAULT_GPU_PREDICTION_SYSTEM", "vista")
 
 
 def _resolve_estimator_config(system: str | None, config_name: str | None = None) -> tuple[str, Path]:
@@ -137,9 +174,6 @@ def run_gpu_model(system: str | None = None, config_name: str | None = None) -> 
             str(config_path),
         ]
         cwd = estimator_dir
-    elif GPU_MODEL_SCRIPT:
-        command = [python_executable, GPU_MODEL_SCRIPT]
-        cwd = None
     else:
         return (
             f"Estimator not found at {estimator_dir / 'mml_3d_prediction.py'}",
@@ -226,33 +260,38 @@ def _extract_json_object(text: str) -> dict[str, object] | None:
     return parsed if isinstance(parsed, dict) else None
 
 
+def _fallback_tool_decision(prompt: str) -> dict[str, object] | None:
+    text = prompt.lower()
+    asks_for_time = any(
+        phrase in text
+        for phrase in [
+            "predict training time",
+            "estimate training time",
+            "training time",
+            "timecost",
+            "runtime",
+        ]
+    )
+    if not asks_for_time:
+        return None
+    if "vista" in text:
+        return {"tool": "predict_gpu_time", "arguments": {"system": "vista"}}
+    if any(name in text for name in ["perlmutter", "permutter", "permultter"]):
+        return {"tool": "predict_gpu_time", "arguments": {"system": "perlmutter"}}
+    return None
+
+
 def _tool_router_prompt(user_prompt: str) -> str:
-    return f"""You are an MCP tool router for an HPC assistant.
-
-Available MCP tools:
-1. predict_gpu_time(system)
-   Description: Estimate distributed LLM training time on a target HPC system.
-   Arguments:
-   - system: one of "vista" or "perlmutter"
-
-Choose a tool only when the user is asking for an estimate/prediction of
-training time, time cost, runtime, or performance on Vista or Perlmutter.
-For normal questions, choose no tool.
-
-Return exactly one JSON object and no extra text.
-
-Examples:
-User: Predict training time on Vista.
-{{"tool": "predict_gpu_time", "arguments": {{"system": "vista"}}}}
-
-User: What is Vista?
-{{"tool": "none", "arguments": {{}}}}
-
-User: Predict training time.
-{{"tool": "none", "arguments": {{"reason": "missing target system"}}}}
-
-User: {user_prompt}
-"""
+    return (
+        "Route this HPC request. Return JSON only.\n"
+        "Vista and Perlmutter are HPC systems, not operating systems.\n"
+        "Use predict_gpu_time only for training-time predictions on Vista or Perlmutter.\n\n"
+        "User: Predict training time on Vista\n"
+        '{"tool": "predict_gpu_time", "arguments": {"system": "vista"}}\n\n'
+        "User: What is Vista?\n"
+        '{"tool": "none", "arguments": {}}\n\n'
+        f"User: {user_prompt}\n"
+    )
 
 
 def choose_tool_with_llm(prompt: str) -> dict[str, object]:
@@ -262,29 +301,13 @@ def choose_tool_with_llm(prompt: str) -> dict[str, object]:
     )
     parsed = _extract_json_object(raw_decision)
     if not parsed:
-        return {"tool": "none", "arguments": {"reason": "invalid tool decision"}}
+        return _fallback_tool_decision(prompt) or {
+            "tool": "none",
+            "arguments": {"reason": "invalid tool decision"},
+        }
+    if parsed.get("tool") == "none":
+        return _fallback_tool_decision(prompt) or parsed
     return parsed
-
-
-def answer_with_tool_result(
-    user_prompt: str,
-    tool_name: str,
-    tool_result: str,
-    max_new_tokens: int,
-) -> str:
-    final_prompt = f"""You are an HPC assistant.
-
-The user asked:
-{user_prompt}
-
-You called MCP tool `{tool_name}` and got this result:
-{tool_result}
-
-Answer the user concisely. Include the estimated time in microseconds and
-seconds when present. Do not list every operator-level line unless the user
-explicitly asks for raw details.
-"""
-    return get_backend().generate(final_prompt, max_new_tokens=max_new_tokens)
 
 
 def generate_chat_response(prompt: str, max_new_tokens: int = 300) -> str:
@@ -300,26 +323,20 @@ def generate_chat_response(prompt: str, max_new_tokens: int = 300) -> str:
             return "Which target system should I use for the prediction: Vista or Perlmutter?"
 
         tool_output, selected_system, config_path = run_gpu_model(str(system))
-        tool_result = summarize_gpu_prediction(tool_output, selected_system, config_path)
-        return answer_with_tool_result(
-            prompt,
-            "predict_gpu_time",
-            tool_result,
-            max_new_tokens=max_new_tokens,
-        )
+        return summarize_gpu_prediction(tool_output, selected_system, config_path)
 
     return get_backend().generate(prompt, max_new_tokens=max_new_tokens)
 
 
 @mcp.tool()
 def chat(prompt: str) -> str:
-    """Main entry tool. The LLM decides whether to call MCP tools."""
+    """Answer an HPC question and route training-time requests to the estimator."""
     return generate_chat_response(prompt)
 
 
 @mcp.tool()
 def predict_gpu_time(system: str = "vista") -> str:
-    """Predict GPU/training time for Vista or Perlmutter."""
+    """Predict distributed LLM training time on Vista or Perlmutter."""
     response, _, _ = predict_gpu_time_response(system)
     return response
 
@@ -340,13 +357,22 @@ def service_info() -> ServiceInfo:
         service=SERVICE_NAME,
         endpoints={
             "health": "GET /health",
+            "about": "GET /about",
             "chat": "POST /chat",
             "predict_gpu_time": "POST /predict-gpu-time",
-            "mcp": "/mcp",
+            "mcp": "/mcp/",
         },
-        model_id=os.environ.get("MODEL_ID", "meta-llama/Llama-3.1-8B-Instruct"),
-        llm_backend=os.environ.get("LLM_BACKEND", "deepspeed"),
+        model_id=os.environ.get("MODEL_ID", "Qwen/Qwen2.5-0.5B-Instruct"),
+        llm_backend=os.environ.get("LLM_BACKEND", "transformers"),
     )
+
+
+@app.get("/about", response_class=HTMLResponse)
+def about_page() -> HTMLResponse:
+    page_path = _about_page_path()
+    if not page_path.exists():
+        raise HTTPException(status_code=404, detail="About page not found")
+    return HTMLResponse(page_path.read_text(encoding="utf-8"))
 
 
 @app.post("/chat", response_model=ChatResponse)
