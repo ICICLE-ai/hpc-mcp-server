@@ -19,7 +19,7 @@ deployment:
   platform: "ICICLE Tapis Pods"
   pod_id: hpcmcpservercpu
   base_url: "https://hpcmcpservercpu.pods.icicleai.tapis.io"
-  mcp_endpoint: "https://hpcmcpservercpu.pods.icicleai.tapis.io/mcp/"
+  mcp_endpoint: "https://hpcmcpservercpu.pods.icicleai.tapis.io/mcp"
 
 runtime:
   language: Python
@@ -55,7 +55,7 @@ api:
       path: /predict-gpu-time
       description: "Direct distributed training-time prediction endpoint."
     - method: POST
-      path: /mcp/
+      path: /mcp
       description: "MCP Streamable HTTP endpoint."
 
 auth:
