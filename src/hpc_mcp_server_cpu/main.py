@@ -69,9 +69,9 @@ def _find_estimator_dir() -> Path:
 
 mcp = FastMCP(
     "ExecutionAwareLLM",
-    # This child app is mounted at /mcp, so its endpoint must be at the child
-    # root. Otherwise the externally visible path becomes /mcp/mcp.
-    streamable_http_path="/",
+    # The child app is mounted at the FastAPI root so this is exposed as the
+    # exact /mcp path without a trailing-slash redirect.
+    streamable_http_path="/mcp",
     transport_security=TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
         allowed_hosts=_comma_separated_setting(
@@ -360,7 +360,7 @@ def service_info() -> ServiceInfo:
             "about": "GET /about",
             "chat": "POST /chat",
             "predict_gpu_time": "POST /predict-gpu-time",
-            "mcp": "/mcp/",
+            "mcp": "/mcp",
         },
         model_id=os.environ.get("MODEL_ID", "Qwen/Qwen2.5-0.5B-Instruct"),
         llm_backend=os.environ.get("LLM_BACKEND", "transformers"),
@@ -406,7 +406,7 @@ def predict_gpu_time_endpoint(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-app.mount("/mcp", mcp.streamable_http_app())
+app.mount("/", mcp.streamable_http_app())
 
 
 def run() -> None:

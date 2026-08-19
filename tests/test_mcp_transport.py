@@ -25,7 +25,7 @@ class McpTransportTest(unittest.TestCase):
     def test_public_endpoint_lists_registered_tools(self) -> None:
         with TestClient(app, base_url=f"https://{MCP_PUBLIC_HOST}") as client:
             initialize = client.post(
-                "/mcp/",
+                "/mcp",
                 headers=MCP_HEADERS,
                 json={
                     "jsonrpc": "2.0",
@@ -45,14 +45,14 @@ class McpTransportTest(unittest.TestCase):
             session_headers = {**MCP_HEADERS, "Mcp-Session-Id": session_id}
 
             initialized = client.post(
-                "/mcp/",
+                "/mcp",
                 headers=session_headers,
                 json={"jsonrpc": "2.0", "method": "notifications/initialized"},
             )
             self.assertEqual(initialized.status_code, 202, initialized.text)
 
             tool_list = client.post(
-                "/mcp/",
+                "/mcp",
                 headers=session_headers,
                 json={"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
             )
@@ -62,7 +62,7 @@ class McpTransportTest(unittest.TestCase):
             self.assertTrue(all(tool.get("description") for tool in tools))
 
             untrusted = client.post(
-                "https://untrusted.example/mcp/",
+                "https://untrusted.example/mcp",
                 headers=MCP_HEADERS,
                 json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
             )

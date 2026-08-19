@@ -3,7 +3,7 @@
   "info": {
     "title": "hpc-mcp-server-cpu",
     "version": "0.1.0",
-    "description": "HTTP API for the HPC-MCP CPU service. The MCP endpoint is available at /mcp/ using Streamable HTTP transport."
+    "description": "HTTP API for the HPC-MCP CPU service. The MCP endpoint is available at /mcp using Streamable HTTP transport."
   },
   "servers": [
     {
