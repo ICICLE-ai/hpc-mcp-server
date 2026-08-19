@@ -1,0 +1,315 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "hpc-mcp-server-cpu",
+    "version": "0.1.0",
+    "description": "HTTP API for the HPC-MCP CPU service. The MCP endpoint is available at /mcp/ using Streamable HTTP transport."
+  },
+  "servers": [
+    {
+      "url": "https://hpcmcpservercpu.pods.icicleai.tapis.io",
+      "description": "Current ICICLE Tapis Pod deployment"
+    },
+    {
+      "url": "http://127.0.0.1:8000",
+      "description": "Local development server"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Get service metadata",
+        "operationId": "getServiceInfo",
+        "responses": {
+          "200": {
+            "description": "Service metadata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "Health status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/about": {
+      "get": {
+        "summary": "Get HTML overview page",
+        "operationId": "getAboutPage",
+        "responses": {
+          "200": {
+            "description": "HTML service overview.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "About page not found."
+          }
+        }
+      }
+    },
+    "/chat": {
+      "post": {
+        "summary": "Chat with the LLM and route tool requests",
+        "operationId": "postChat",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              },
+              "examples": {
+                "normalChat": {
+                  "summary": "Normal chat",
+                  "value": {
+                    "prompt": "Say hello in one short sentence.",
+                    "max_new_tokens": 30
+                  }
+                },
+                "toolRoutedPrediction": {
+                  "summary": "Tool-routed Vista prediction",
+                  "value": {
+                    "prompt": "Predict training time on Vista. Answer with microseconds and seconds.",
+                    "max_new_tokens": 120
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chat response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error."
+          },
+          "500": {
+            "description": "Runtime error."
+          }
+        }
+      }
+    },
+    "/predict-gpu-time": {
+      "post": {
+        "summary": "Run the distributed training-time estimator",
+        "operationId": "postPredictGpuTime",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GpuTimePredictionRequest"
+              },
+              "examples": {
+                "vista": {
+                  "summary": "Vista prediction",
+                  "value": {
+                    "system": "vista"
+                  }
+                },
+                "perlmutter": {
+                  "summary": "Perlmutter prediction",
+                  "value": {
+                    "system": "perlmutter"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Estimator output.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GpuTimePredictionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error."
+          },
+          "500": {
+            "description": "Runtime error."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChatRequest": {
+        "type": "object",
+        "required": [
+          "prompt"
+        ],
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User prompt."
+          },
+          "max_new_tokens": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2048,
+            "default": 300,
+            "description": "Maximum number of new tokens to generate."
+          }
+        }
+      },
+      "ChatResponse": {
+        "type": "object",
+        "required": [
+          "response"
+        ],
+        "properties": {
+          "response": {
+            "type": "string"
+          }
+        }
+      },
+      "GpuTimePredictionRequest": {
+        "type": "object",
+        "properties": {
+          "system": {
+            "type": "string",
+            "default": "vista",
+            "description": "Target HPC system. Supported values include vista and perlmutter."
+          },
+          "config_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional estimator config name or absolute config path."
+          }
+        }
+      },
+      "GpuTimePredictionResponse": {
+        "type": "object",
+        "required": [
+          "response",
+          "system",
+          "config_path"
+        ],
+        "properties": {
+          "response": {
+            "type": "string",
+            "description": "Raw estimator response."
+          },
+          "system": {
+            "type": "string",
+            "description": "Normalized target system."
+          },
+          "config_path": {
+            "type": "string",
+            "description": "Estimator config path used by the service."
+          }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "service",
+          "version",
+          "build_sha",
+          "timestamp"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok"
+          },
+          "service": {
+            "type": "string",
+            "example": "hpc-mcp-server-cpu"
+          },
+          "version": {
+            "type": "string",
+            "example": "0.1.0"
+          },
+          "build_sha": {
+            "type": "string",
+            "example": "b727de2aeb07abce93dff7ba92b357c94856e77e"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ServiceInfo": {
+        "type": "object",
+        "required": [
+          "service",
+          "endpoints",
+          "model_id",
+          "llm_backend"
+        ],
+        "properties": {
+          "service": {
+            "type": "string",
+            "example": "hpc-mcp-server-cpu"
+          },
+          "endpoints": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "model_id": {
+            "type": "string",
+            "example": "Qwen/Qwen2.5-0.5B-Instruct"
+          },
+          "llm_backend": {
+            "type": "string",
+            "example": "transformers"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-# hpc-mcp-server: execution-aware LLM MCP server for Tapis Pods.
+# hpc-mcp-server-cpu: execution-aware LLM MCP server for Tapis Pods.
 # Multi-stage build using uv for reproducible, locked dependency installs.
 
 ARG PYTHON_VERSION=3.11
@@ -18,7 +18,7 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=0
 
-# build-essential is required to compile deepspeed (and other) source packages.
+# Keep native build tooling available for Python packages without wheels.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential git \
     && rm -rf /var/lib/apt/lists/*
@@ -37,16 +37,15 @@ COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
-# The vendored training estimator needs ijson, which is not a project dep.
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install ijson
-
 # ---------------------------------------------------------------------------
 # Runtime: slim image carrying only the venv and application source.
 # ---------------------------------------------------------------------------
 FROM python:${PYTHON_VERSION}-slim AS runtime
 
-RUN groupadd --system app \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system app \
     && useradd --system --gid app --create-home --home-dir /home/app app
 
 WORKDIR /app

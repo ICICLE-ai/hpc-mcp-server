@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>HPC MCP Server</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f8fb;
+        --panel: #ffffff;
+        --text: #202124;
+        --muted: #60646c;
+        --line: #d9dee7;
+        --nav: #ffffff;
+        --active: #ece7ff;
+        --blue: #0b66c3;
+        --teal: #047c7a;
+        --green: #1f8f4d;
+        --amber: #b26b00;
+        --ink: #15181d;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      a {
+        color: var(--blue);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        background: var(--nav);
+        border-right: 1px solid var(--line);
+        padding: 24px 16px;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px 24px;
+      }
+
+      .brand-mark {
+        width: 54px;
+        height: 54px;
+        border-radius: 8px;
+        background: #111827;
+        display: grid;
+        place-items: center;
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 19px;
+      }
+
+      .brand-title {
+        font-size: 24px;
+        font-weight: 800;
+        line-height: 1.1;
+      }
+
+      .brand-subtitle {
+        color: var(--muted);
+        margin-top: 4px;
+        font-size: 13px;
+      }
+
+      .nav-list {
+        display: grid;
+        gap: 4px;
+        margin-top: 8px;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 44px;
+        padding: 0 12px;
+        border-radius: 6px;
+        color: #2f3338;
+        font-size: 17px;
+      }
+
+      .nav-item.active {
+        background: var(--active);
+      }
+
+      .nav-icon {
+        width: 22px;
+        height: 22px;
+        display: grid;
+        place-items: center;
+        color: #71757d;
+      }
+
+      .content {
+        min-width: 0;
+      }
+
+      .topbar {
+        height: 72px;
+        display: flex;
+        align-items: center;
+        padding: 0 36px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+        font-size: 22px;
+        font-weight: 700;
+      }
+
+      .main {
+        padding: 34px 40px 56px;
+        max-width: 1280px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(420px, 0.95fr);
+        gap: 28px;
+        align-items: stretch;
+      }
+
+      .hero-copy {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 36px;
+      }
+
+      .eyebrow {
+        color: var(--teal);
+        font-weight: 800;
+        font-size: 14px;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 14px 0 18px;
+        font-size: 52px;
+        line-height: 1.05;
+        letter-spacing: 0;
+      }
+
+      .lead {
+        color: var(--muted);
+        font-size: 21px;
+        line-height: 1.55;
+        max-width: 760px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 28px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 42px;
+        padding: 0 16px;
+        border-radius: 6px;
+        border: 1px solid var(--line);
+        background: #ffffff;
+        color: var(--text);
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .button.primary {
+        background: var(--blue);
+        color: #ffffff;
+        border-color: var(--blue);
+      }
+
+      .demo-panel {
+        background: #15181d;
+        border-radius: 8px;
+        border: 1px solid #2a2f38;
+        color: #f6f7fb;
+        overflow: hidden;
+        min-height: 460px;
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+
+      .demo-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 16px;
+        border-bottom: 1px solid #2a2f38;
+      }
+
+      .window-dots {
+        display: flex;
+        gap: 7px;
+      }
+
+      .dot {
+        width: 11px;
+        height: 11px;
+        border-radius: 999px;
+      }
+
+      .dot.red {
+        background: #ff5f57;
+      }
+
+      .dot.yellow {
+        background: #ffbd2e;
+      }
+
+      .dot.green {
+        background: #28c840;
+      }
+
+      .endpoint {
+        color: #b9c7d8;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 13px;
+      }
+
+      .chat {
+        display: grid;
+        align-content: start;
+        gap: 14px;
+        padding: 20px;
+      }
+
+      .message {
+        border: 1px solid #2f3743;
+        border-radius: 8px;
+        padding: 14px 16px;
+        line-height: 1.45;
+      }
+
+      .message.user {
+        background: #1f2630;
+      }
+
+      .message.assistant {
+        background: #18251f;
+      }
+
+      .message.tool {
+        background: #1f2534;
+        border-color: #304266;
+      }
+
+      .label {
+        color: #9fb3c8;
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        margin-bottom: 7px;
+      }
+
+      code,
+      pre {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 28px;
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 22px;
+        min-height: 180px;
+      }
+
+      .card h2 {
+        margin: 0 0 10px;
+        font-size: 22px;
+        letter-spacing: 0;
+      }
+
+      .card p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+        font-size: 16px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 26px;
+        padding: 0 9px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+        margin-bottom: 14px;
+      }
+
+      .pill.green {
+        background: #e7f6ee;
+        color: var(--green);
+      }
+
+      .pill.blue {
+        background: #eaf2ff;
+        color: var(--blue);
+      }
+
+      .pill.amber {
+        background: #fff3dc;
+        color: var(--amber);
+      }
+
+      .section {
+        margin-top: 28px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 28px;
+      }
+
+      .section h2 {
+        margin: 0 0 18px;
+        font-size: 28px;
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(360px, 0.85fr);
+        gap: 22px;
+      }
+
+      .info-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .info-row {
+        display: grid;
+        grid-template-columns: 150px minmax(0, 1fr);
+        gap: 14px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .info-row:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+      }
+
+      .info-key {
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .info-value {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+
+      .code-block {
+        position: relative;
+        background: #111827;
+        color: #e5e7eb;
+        border-radius: 8px;
+        padding: 18px;
+        overflow: auto;
+        line-height: 1.55;
+        font-size: 14px;
+      }
+
+      .copy {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        border: 1px solid #394150;
+        background: #202938;
+        color: #e5e7eb;
+        border-radius: 6px;
+        height: 30px;
+        padding: 0 10px;
+        cursor: pointer;
+      }
+
+      .roadmap {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .roadmap-item {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 18px;
+        background: #fbfcfe;
+      }
+
+      .roadmap-item strong {
+        display: block;
+        margin-bottom: 8px;
+      }
+
+      .roadmap-item span {
+        color: var(--muted);
+        line-height: 1.45;
+      }
+
+      @media (max-width: 1080px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: static;
+          height: auto;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .nav-list {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .hero,
+        .two-col {
+          grid-template-columns: 1fr;
+        }
+
+        .demo-panel {
+          min-height: 420px;
+        }
+
+        .grid,
+        .roadmap {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 700px) {
+        .main {
+          padding: 22px 16px 36px;
+        }
+
+        .topbar {
+          padding: 0 18px;
+        }
+
+        h1 {
+          font-size: 38px;
+        }
+
+        .hero-copy {
+          padding: 26px;
+        }
+
+        .grid,
+        .roadmap,
+        .nav-list {
+          grid-template-columns: 1fr;
+        }
+
+        .info-row {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar" aria-label="Navigation">
+        <div class="brand">
+          <div class="brand-mark">IC</div>
+          <div>
+            <div class="brand-title">ICICLE</div>
+            <div class="brand-subtitle">HPC MCP Server</div>
+          </div>
+        </div>
+        <nav class="nav-list">
+          <a class="nav-item" href="#overview"><span class="nav-icon">01</span>Overview</a>
+          <a class="nav-item active" href="#mcp"><span class="nav-icon">02</span>HPC MCP</a>
+          <a class="nav-item" href="#tools"><span class="nav-icon">03</span>Tools</a>
+          <a class="nav-item" href="#access"><span class="nav-icon">04</span>Access</a>
+          <a class="nav-item" href="#roadmap"><span class="nav-icon">05</span>Roadmap</a>
+        </nav>
+      </aside>
+
+      <main class="content">
+        <div class="topbar">domain-agnostic-ai / hpc-mcp-server</div>
+
+        <div class="main">
+          <section id="overview" class="hero">
+            <div class="hero-copy">
+              <div class="eyebrow">LLM assistant for HPC workflows</div>
+              <h1>HPC MCP Server</h1>
+              <p class="lead">
+                A web-accessible MCP service that connects a language model with HPC tools. Users can ask questions in natural language, and the server can either answer directly or call a backend tool when the task requires it.
+              </p>
+              <div class="actions">
+                <a class="button primary" href="https://hpcmcpservercpu.pods.icicleai.tapis.io/health">Health Check</a>
+                <a class="button" href="https://github.com/ICICLE-ai/hpc-mcp-server">GitHub Repo</a>
+              </div>
+            </div>
+
+            <div class="demo-panel" aria-label="Demo preview">
+              <div class="demo-header">
+                <div class="window-dots">
+                  <span class="dot red"></span>
+                  <span class="dot yellow"></span>
+                  <span class="dot green"></span>
+                </div>
+                <div class="endpoint">/chat</div>
+              </div>
+              <div class="chat">
+                <div class="message user">
+                  <div class="label">User</div>
+                  How do I log in to TACC?
+                </div>
+                <div class="message assistant">
+                  <div class="label">Assistant</div>
+                  You can log in from a terminal with ssh using your TACC username and the Stampede3 login host.
+                </div>
+                <div class="message user">
+                  <div class="label">User</div>
+                  Predict the time cost of one parameter update for llemma-7B on Vista.
+                </div>
+                <div class="message tool">
+                  <div class="label">MCP Tool Result</div>
+                  System: vista<br>
+                  Estimated timecost: 4764606.22498043 us (4.765 seconds)
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="mcp" class="grid">
+            <article class="card">
+              <span class="pill green">Available</span>
+              <h2>Deployed on Tapis Pods</h2>
+              <p>The current working service is deployed as a CPU Tapis Pod and can be reached anywhere with an internet connection.</p>
+            </article>
+            <article class="card">
+              <span class="pill blue">MCP Endpoint</span>
+              <h2>Agent Ready</h2>
+              <p>Claude Code or another MCP client can connect through HTTP transport at the public MCP endpoint.</p>
+            </article>
+            <article class="card">
+              <span class="pill amber">CPU Version</span>
+              <h2>Small Local Model</h2>
+              <p>The current deployment uses a compact CPU language model for intent routing and basic chat.</p>
+            </article>
+          </section>
+
+          <section id="tools" class="section">
+            <h2>Current Capabilities</h2>
+            <div class="grid">
+              <article class="card">
+                <h2>General Chat</h2>
+                <p>The LLM can answer normal user questions directly when no external tool is needed.</p>
+              </article>
+              <article class="card">
+                <h2>Tool Routing</h2>
+                <p>The LLM interprets the request and decides whether to call a backend MCP tool.</p>
+              </article>
+              <article class="card">
+                <h2>Training-Time Prediction</h2>
+                <p>The estimator predicts one parameter update time for distributed LLM training on Vista and Perlmutter.</p>
+              </article>
+            </div>
+          </section>
+
+          <section id="access" class="section">
+            <h2>Service Access</h2>
+            <div class="two-col">
+              <div class="info-list">
+                <div class="info-row">
+                  <div class="info-key">Pod ID</div>
+                  <div class="info-value"><code>hpcmcpservercpu</code></div>
+                </div>
+                <div class="info-row">
+                  <div class="info-key">Pod URL</div>
+                  <div class="info-value"><a href="https://hpcmcpservercpu.pods.icicleai.tapis.io">https://hpcmcpservercpu.pods.icicleai.tapis.io</a></div>
+                </div>
+                <div class="info-row">
+                  <div class="info-key">MCP Endpoint</div>
+                  <div class="info-value"><a href="https://hpcmcpservercpu.pods.icicleai.tapis.io/mcp/">https://hpcmcpservercpu.pods.icicleai.tapis.io/mcp/</a></div>
+                </div>
+                <div class="info-row">
+                  <div class="info-key">Tech Stack</div>
+                  <div class="info-value">Python, FastAPI, Uvicorn, Python MCP SDK, Hugging Face Transformers</div>
+                </div>
+                <div class="info-row">
+                  <div class="info-key">Repository</div>
+                  <div class="info-value"><a href="https://github.com/ICICLE-ai/hpc-mcp-server">github.com/ICICLE-ai/hpc-mcp-server</a></div>
+                </div>
+              </div>
+
+              <div class="code-block">
+                <button class="copy" data-copy="claude mcp add hpc-mcp-server --transport http https://hpcmcpservercpu.pods.icicleai.tapis.io/mcp/">Copy</button>
+<pre>claude mcp add hpc-mcp-server \
+  --transport http \
+  https://hpcmcpservercpu.pods.icicleai.tapis.io/mcp/</pre>
+              </div>
+            </div>
+          </section>
+
+          <section class="section">
+            <h2>Example Request</h2>
+            <div class="code-block">
+              <button class="copy" data-copy="curl --http1.1 -X POST https://hpcmcpservercpu.pods.icicleai.tapis.io/chat -H &quot;Content-Type: application/json&quot; -d '{&quot;prompt&quot;:&quot;Predict the time cost of one parameter update for the llemma-7B distributed training configuration on Perlmutter. Answer with microseconds and seconds.&quot;,&quot;max_new_tokens&quot;:120}'">Copy</button>
+<pre>curl --http1.1 -X POST https://hpcmcpservercpu.pods.icicleai.tapis.io/chat \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"Predict the time cost of one parameter update for the llemma-7B distributed training configuration on Perlmutter. Answer with microseconds and seconds.","max_new_tokens":120}'</pre>
+            </div>
+          </section>
+
+          <section id="roadmap" class="section">
+            <h2>Future Direction</h2>
+            <div class="roadmap">
+              <div class="roadmap-item">
+                <strong>GPU Deployment</strong>
+                <span>Use stronger models and support faster LLM inference when GPU resources are available.</span>
+              </div>
+              <div class="roadmap-item">
+                <strong>HPC-Tuned Model</strong>
+                <span>Fine-tune or adapt a model for HPC workflows, systems, and user support tasks.</span>
+              </div>
+              <div class="roadmap-item">
+                <strong>Command Generation</strong>
+                <span>Generate startup and execution commands from the user's intent.</span>
+              </div>
+              <div class="roadmap-item">
+                <strong>User Guide QA</strong>
+                <span>Add question answering over HPC documentation and user guides.</span>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      document.querySelectorAll("[data-copy]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          await navigator.clipboard.writeText(button.dataset.copy);
+          const original = button.textContent;
+          button.textContent = "Copied";
+          setTimeout(() => {
+            button.textContent = original;
+          }, 1200);
+        });
+      });
+    </script>
+  </body>
+</html>
