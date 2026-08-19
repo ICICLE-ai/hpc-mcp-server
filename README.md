@@ -87,6 +87,18 @@ claude mcp add hpc-mcp-server --transport http https://hpcmcpservercpu.pods.icic
 
 After connecting, an agent can call the exposed MCP tools, including `chat` and `predict_gpu_time`.
 
+To verify MCP initialization and tool discovery with MCP Inspector:
+
+```bash
+npx --yes --package @modelcontextprotocol/inspector -- \
+  mcp-inspector --cli \
+  https://hpcmcpservercpu.pods.icicleai.tapis.io/mcp/ \
+  --transport http \
+  --method tools/list
+```
+
+The public hostname used by MCP transport security defaults to the deployed Tapis hostname. Set `MCP_PUBLIC_HOST` when deploying under a different hostname. Advanced deployments can provide comma-separated `MCP_ALLOWED_HOSTS` and `MCP_ALLOWED_ORIGINS` values.
+
 ## Local Development
 
 ```bash

@@ -10,6 +10,7 @@ from threading import Lock
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from pydantic import BaseModel, Field
 
 from hpc_mcp_server_cpu.api.health import router as health_router
@@ -31,6 +32,18 @@ ESTIMATOR_CONFIGS = {
     "permultter": "llemma_7b_4_2_2_P.yml",
     "p": "llemma_7b_4_2_2_P.yml",
 }
+
+MCP_PUBLIC_HOST = os.environ.get(
+    "MCP_PUBLIC_HOST",
+    "hpcmcpservercpu.pods.icicleai.tapis.io",
+)
+
+
+def _comma_separated_setting(name: str, defaults: list[str]) -> list[str]:
+    value = os.environ.get(name)
+    if value is None:
+        return defaults
+    return [item.strip() for item in value.split(",") if item.strip()]
 
 
 def _find_estimator_dir() -> Path:
@@ -54,7 +67,34 @@ def _find_estimator_dir() -> Path:
     return candidates[0]
 
 
-mcp = FastMCP("ExecutionAwareLLM")
+mcp = FastMCP(
+    "ExecutionAwareLLM",
+    # This child app is mounted at /mcp, so its endpoint must be at the child
+    # root. Otherwise the externally visible path becomes /mcp/mcp.
+    streamable_http_path="/",
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=_comma_separated_setting(
+            "MCP_ALLOWED_HOSTS",
+            [
+                MCP_PUBLIC_HOST,
+                f"{MCP_PUBLIC_HOST}:*",
+                "127.0.0.1:*",
+                "localhost:*",
+                "[::1]:*",
+            ],
+        ),
+        allowed_origins=_comma_separated_setting(
+            "MCP_ALLOWED_ORIGINS",
+            [
+                f"https://{MCP_PUBLIC_HOST}",
+                "http://127.0.0.1:*",
+                "http://localhost:*",
+                "http://[::1]:*",
+            ],
+        ),
+    ),
+)
 _backend: LLMBackend | None = None
 _backend_lock = Lock()
 
@@ -290,11 +330,13 @@ def generate_chat_response(prompt: str, max_new_tokens: int = 300) -> str:
 
 @mcp.tool()
 def chat(prompt: str) -> str:
+    """Answer an HPC question and route training-time requests to the estimator."""
     return generate_chat_response(prompt)
 
 
 @mcp.tool()
 def predict_gpu_time(system: str = "vista") -> str:
+    """Predict distributed LLM training time on Vista or Perlmutter."""
     response, _, _ = predict_gpu_time_response(system)
     return response
 
@@ -318,7 +360,7 @@ def service_info() -> ServiceInfo:
             "about": "GET /about",
             "chat": "POST /chat",
             "predict_gpu_time": "POST /predict-gpu-time",
-            "mcp": "/mcp",
+            "mcp": "/mcp/",
         },
         model_id=os.environ.get("MODEL_ID", "Qwen/Qwen2.5-0.5B-Instruct"),
         llm_backend=os.environ.get("LLM_BACKEND", "transformers"),
