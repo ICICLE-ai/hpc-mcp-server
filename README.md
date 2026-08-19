@@ -10,14 +10,14 @@ Current deployment:
 
 - Pod ID: `hpcmcpservercpu`
 - Base URL: `https://hpcmcpservercpu.pods.icicleai.tapis.io`
-- MCP endpoint: `https://hpcmcpservercpu.pods.icicleai.tapis.io/mcp/`
+- MCP endpoint: `https://hpcmcpservercpu.pods.icicleai.tapis.io/mcp`
 - Container image: `ghcr.io/icicle-ai/hpc-mcp-server-cpu:0.1.0`
 
 ## Current Capabilities
 
 - Normal LLM chat through `/chat`
 - Distributed training-time prediction for configurable HPC model training workloads on Vista and Perlmutter
-- MCP access over Streamable HTTP at `/mcp/`
+- MCP access over Streamable HTTP at `/mcp`
 
 The LLM is used for request understanding and tool routing. The numerical training-time prediction is done by the backend estimator tool, not by the LLM itself.
 
@@ -82,7 +82,7 @@ curl -X POST https://hpcmcpservercpu.pods.icicleai.tapis.io/predict-gpu-time \
 Claude Code or another MCP client can connect through HTTP transport:
 
 ```bash
-claude mcp add hpc-mcp-server --transport http https://hpcmcpservercpu.pods.icicleai.tapis.io/mcp/
+claude mcp add hpc-mcp-server --transport http https://hpcmcpservercpu.pods.icicleai.tapis.io/mcp
 ```
 
 After connecting, an agent can call the exposed MCP tools, including `chat` and `predict_gpu_time`.
@@ -92,7 +92,7 @@ To verify MCP initialization and tool discovery with MCP Inspector:
 ```bash
 npx --yes --package @modelcontextprotocol/inspector -- \
   mcp-inspector --cli \
-  https://hpcmcpservercpu.pods.icicleai.tapis.io/mcp/ \
+  https://hpcmcpservercpu.pods.icicleai.tapis.io/mcp \
   --transport http \
   --method tools/list
 ```
