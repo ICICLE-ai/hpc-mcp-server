@@ -1,10 +1,35 @@
 # HPC-MCP: LLM-Assisted HPC Utility Server
 
-An MCP server for HPC users. It combines an LLM interface with backend HPC tools so users can ask natural-language questions and let the service decide when a tool should be called.
+HPC-MCP is a web-accessible MCP service for HPC users. It connects an LLM interface with backend HPC utilities so users can ask natural-language questions and call HPC tools through HTTP or MCP clients.
 
-Upstream estimator tool:
+The current release focuses on distributed training-time prediction for configurable model training workloads on Vista and Perlmutter. Future releases can add additional HPC tools, including command generation and user-guide question answering.
 
-- Distributed Training Estimator of LLMs: `https://github.com/ICICLE-ai/distributed_training_estimator_of_LLM`
+## Training Catalog Summary
+
+Audience:
+
+- HPC users who want a natural-language interface to HPC utilities
+- Developers building MCP clients or agents for HPC workflows
+- ICICLE users testing service-based AI utilities through Tapis Pods
+
+Use cases:
+
+- Ask normal questions through `/chat`
+- Request distributed training-time predictions for Vista and Perlmutter
+- Connect an MCP client to the service and call exposed tools
+
+Prerequisites:
+
+- Network access to the deployed Tapis Pod endpoint
+- A terminal with `curl` for HTTP examples
+- Optional: Claude Code or another MCP client for MCP access
+
+Estimated setup time:
+
+- 5 minutes for HTTP examples
+- 10-15 minutes for MCP client setup and tool discovery
+
+## Service Information
 
 Current deployment:
 
@@ -12,26 +37,94 @@ Current deployment:
 - Base URL: `https://hpcmcpservercpu.pods.icicleai.tapis.io`
 - MCP endpoint: `https://hpcmcpservercpu.pods.icicleai.tapis.io/mcp`
 - Container image: `ghcr.io/icicle-ai/hpc-mcp-server-cpu:0.1.0`
+- Release format: service-only Tapis Pod deployment with source code in GitHub
 
-## Current Capabilities
+Upstream estimator tool:
 
-- Normal LLM chat through `/chat`
-- Distributed training-time prediction for configurable HPC model training workloads on Vista and Perlmutter
+- Distributed Training Estimator of LLMs: `https://github.com/ICICLE-ai/distributed_training_estimator_of_LLM`
+
+## Features
+
+- LLM chat through `/chat`
+- Training-time prediction through `/chat`
+- Direct distributed training-time prediction through `/predict-gpu-time`
 - MCP access over Streamable HTTP at `/mcp`
+- Service health checking through `/health`
 
-The LLM is used for request understanding and tool routing. The numerical training-time prediction is done by the backend estimator tool, not by the LLM itself.
+The LLM handles request understanding and tool routing. Numerical training-time prediction is computed by the backend estimator.
 
-Example user question for the current demo configuration: `Predict training time for the LLaMA 7B training configuration on Vista. Answer with microseconds and seconds.`
+Example question:
 
-## API
+```text
+Predict training time for the LLaMA 7B training configuration on Vista. Answer with microseconds and seconds.
+```
 
-The static OpenAPI spec is saved at:
+## Quick Start
+
+Check that the service is running:
+
+```bash
+curl https://hpcmcpservercpu.pods.icicleai.tapis.io/health
+```
+
+Expected result:
+
+```json
+{
+  "status": "ok",
+  "service": "hpc-mcp-server-cpu",
+  "version": "0.1.0"
+}
+```
+
+Ask a short question:
+
+```bash
+curl --http1.1 --max-time 180 https://hpcmcpservercpu.pods.icicleai.tapis.io/chat \
+  -H "Content-Type: application/json" \
+  --data-raw '{"prompt":"Say hello in one short sentence.","max_new_tokens":30}'
+```
+
+Ask for a training-time prediction:
+
+```bash
+curl --http1.1 --max-time 180 https://hpcmcpservercpu.pods.icicleai.tapis.io/chat \
+  -H "Content-Type: application/json" \
+  --data-raw '{"prompt":"Predict training time on Vista. Answer with microseconds and seconds.","max_new_tokens":120}'
+```
+
+Example:
+
+```json
+{
+  "response": "System: vista\nConfig: /app/vendor/distributed_training_estimator/Estimator/target_config/llemma_7b_4_2_2_V.yml\nEstimated timecost: 4764606.22498043 us (4.765 seconds)."
+}
+```
+
+Call the estimator directly:
+
+```bash
+curl --http1.1 --max-time 180 https://hpcmcpservercpu.pods.icicleai.tapis.io/predict-gpu-time \
+  -H "Content-Type: application/json" \
+  --data-raw '{"system":"perlmutter"}'
+```
+
+Supported `system` values:
+
+- `vista`
+- `perlmutter`
+
+Common misspellings such as `permutter` and `permultter` are also accepted.
+
+## API Reference
+
+The static OpenAPI specification is saved at:
 
 ```text
 docs/openapi.json
 ```
 
-FastAPI also exposes the live spec from the running service:
+Live OpenAPI URL:
 
 ```text
 https://hpcmcpservercpu.pods.icicleai.tapis.io/openapi.json
@@ -47,34 +140,43 @@ POST /chat
 POST /predict-gpu-time
 ```
 
-Example health check:
+### POST /chat
 
-```bash
-curl https://hpcmcpservercpu.pods.icicleai.tapis.io/health
+Request body:
+
+```json
+{
+  "prompt": "Predict training time on Vista. Answer with microseconds and seconds.",
+  "max_new_tokens": 120
+}
 ```
 
-Example chat request:
+Response body:
 
-```bash
-curl -X POST https://hpcmcpservercpu.pods.icicleai.tapis.io/chat \
-  -H "Content-Type: application/json" \
-  -d '{"prompt":"Say hello in one short sentence.","max_new_tokens":30}'
+```json
+{
+  "response": "..."
+}
 ```
 
-Example tool-routed request:
+### POST /predict-gpu-time
 
-```bash
-curl -X POST https://hpcmcpservercpu.pods.icicleai.tapis.io/chat \
-  -H "Content-Type: application/json" \
-  -d '{"prompt":"Predict training time on Vista. Answer with microseconds and seconds.","max_new_tokens":120}'
+Request body:
+
+```json
+{
+  "system": "vista"
+}
 ```
 
-Example direct estimator request:
+Response body:
 
-```bash
-curl -X POST https://hpcmcpservercpu.pods.icicleai.tapis.io/predict-gpu-time \
-  -H "Content-Type: application/json" \
-  -d '{"system":"perlmutter"}'
+```json
+{
+  "response": "...",
+  "system": "vista",
+  "config_path": "/app/vendor/distributed_training_estimator/Estimator/target_config/llemma_7b_4_2_2_V.yml"
+}
 ```
 
 ## MCP Client Access
@@ -85,7 +187,10 @@ Claude Code or another MCP client can connect through HTTP transport:
 claude mcp add hpc-mcp-server --transport http https://hpcmcpservercpu.pods.icicleai.tapis.io/mcp
 ```
 
-After connecting, an agent can call the exposed MCP tools, including `chat` and `predict_gpu_time`.
+After connecting, an agent can call the exposed MCP tools:
+
+- `chat`
+- `predict_gpu_time`
 
 To verify MCP initialization and tool discovery with MCP Inspector:
 
@@ -97,34 +202,113 @@ npx --yes --package @modelcontextprotocol/inspector -- \
   --method tools/list
 ```
 
-The public hostname used by MCP transport security defaults to the deployed Tapis hostname. Set `MCP_PUBLIC_HOST` when deploying under a different hostname. Advanced deployments can provide comma-separated `MCP_ALLOWED_HOSTS` and `MCP_ALLOWED_ORIGINS` values.
+Set `MCP_PUBLIC_HOST` when deploying under a different hostname.
 
-## Local Development
+## Tapis Pod Deployment
 
-```bash
-uv sync --locked
-
-export LLM_BACKEND=transformers
-export MODEL_ID=Qwen/Qwen2.5-0.5B-Instruct
-export TORCH_DTYPE=float32
-export HF_HOME=/tmp/huggingface
-export ESTIMATOR_DIR=/app/vendor/distributed_training_estimator/Estimator
-
-uv run uvicorn hpc_mcp_server_cpu.main:app --host 127.0.0.1 --port 8000
-```
-
-For local testing from the repository root, set `ESTIMATOR_DIR` to:
-
-```text
-vendor/distributed_training_estimator/Estimator
-```
-
-## Tapis Pod
-
-A working Tapis Pod example is provided in:
+A working Tapis Pod configuration example is provided in:
 
 ```text
 tapis-pod.example.json
 ```
 
-The current CPU deployment uses a small Transformers model. Future GPU deployments can use stronger models and support more HPC tools.
+Environment variables:
+
+```text
+PORT=8000
+LLM_BACKEND=transformers
+MODEL_ID=Qwen/Qwen2.5-0.5B-Instruct
+HF_HOME=/models/.cache/huggingface
+HF_LOCAL_FILES_ONLY=false
+TORCH_DTYPE=float32
+ESTIMATOR_DIR=/app/vendor/distributed_training_estimator/Estimator
+GPU_MODEL_TIMEOUT_SECONDS=300
+```
+
+Optional CPU demo setting:
+
+```text
+TOOL_DECISION_MAX_NEW_TOKENS=8
+```
+
+If `MODEL_ID` is a local path, download the model to that path inside the pod before calling `/chat`.
+
+## Local Development
+
+Install dependencies:
+
+```bash
+uv sync --locked
+```
+
+Run the service locally:
+
+```bash
+export LLM_BACKEND=transformers
+export MODEL_ID=Qwen/Qwen2.5-0.5B-Instruct
+export TORCH_DTYPE=float32
+export HF_HOME=/tmp/huggingface
+export ESTIMATOR_DIR=vendor/distributed_training_estimator/Estimator
+
+uv run uvicorn hpc_mcp_server_cpu.main:app --host 127.0.0.1 --port 8000
+```
+
+Run tests:
+
+```bash
+uv run python -m unittest tests/test_mcp_transport.py
+```
+
+## Troubleshooting
+
+If `/health` works but `/chat` fails with a model path error, check whether the configured model path exists inside the pod:
+
+```bash
+ls /tmp/huggingface/Qwen2.5-0.5B-Instruct
+```
+
+If the directory is missing, download the model again or use a persistent Tapis volume for model storage.
+
+If `/chat` returns slowly on CPU, reduce the number of requested tokens:
+
+```json
+{
+  "prompt": "Say hello.",
+  "max_new_tokens": 5
+}
+```
+
+For demos on CPU-only pods, setting `TOOL_DECISION_MAX_NEW_TOKENS=8` can reduce routing latency.
+
+If `curl` examples fail, make sure the JSON field is written as `max_new_tokens`, not `max\_new\_tokens`.
+
+## Maintainers and Support
+
+Maintainer:
+
+- Molang Wu
+
+For release, deployment, or ICICLE Tapis UI questions, contact the ICICLE software team.
+
+For bugs or documentation issues, open an issue in the GitHub repository:
+
+```text
+https://github.com/ICICLE-ai/hpc-mcp-server/issues
+```
+
+## Acknowledgements
+
+This work is part of the National Science Foundation funded AI Institute for Intelligent Cyberinfrastructure with Computational Learning in the Environment (ICICLE), OAC 2112606.
+
+## License
+
+License information should be finalized with the project PI and ICICLE software release team before public source-code release.
+
+## Tags
+
+- Software
+- AI-as-a-Service
+- HPC
+- MCP
+- Tapis Pods
+- ICICLE
