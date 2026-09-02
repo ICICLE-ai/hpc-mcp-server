@@ -2,7 +2,7 @@
 
 HPC-MCP is a service-based ICICLE software component that gives HPC users a natural-language interface to backend HPC utilities. The current release provides distributed LLM training-time prediction for Vista and Perlmutter through HTTP endpoints and MCP clients.
 
-**Tags:** Software, CI4AI, AI4CI
+**Tags:** Software, AI4CI
 
 For guidance on what to include in Tutorials, How-To Guides, Explanation, and Reference, see [Diataxis](https://diataxis.fr/).
 
