@@ -1,82 +1,25 @@
-- id: "HPCMCPServerCPU:0.1.0"
-  owner: "Molang Wu"
-  primaryThrust: "core/AI4CI"
-  name: "HPC MCP Server CPU"
-  status: "ProductionRelease"
-  description: "HPC-MCP is a service-based ICICLE software component that gives HPC users a natural-language interface to backend HPC utilities. The current release provides distributed LLM training-time prediction for Vista and Perlmutter through HTTP endpoints and MCP clients."
-  componentVersion: "0.1.0"
-  targetIcicleRelease: "2026-09"
-  licenseUrl: "https://github.com/ICICLE-ai/hpc-mcp-server?tab=MIT-1-ov-file"
-  publicAccess: true
-  sourceCodeUrl: "https://github.com/ICICLE-ai/hpc-mcp-server"
-  codeReviewConducted: true
-  testsWritten: true
-  developerDocumentationAvailable: true
-  trainingTutorialsAvailable: true
-
-  schema_version: "0.1"
-  title: "HPC-MCP: LLM-Assisted HPC Utility Server"
-  version: "0.1.0"
-  type: service
-  category: AI-as-a-Service
-
-  repository:
-    url: "https://github.com/ICICLE-ai/hpc-mcp-server"
-    branch: main
-
-  container:
-    image: "ghcr.io/icicle-ai/hpc-mcp-server-cpu:0.1.0"
-    architecture: linux/amd64
-
-  deployment:
-    platform: "ICICLE Tapis Pods"
-    pod_id: hpcmcpservercpu
-    base_url: "https://hpcmcpservercpu.pods.icicleai.tapis.io"
-    mcp_endpoint: "https://hpcmcpservercpu.pods.icicleai.tapis.io/mcp"
-
-  runtime:
-    language: Python
-    python_version: "3.11"
-    frameworks:
-      - FastAPI
-      - Uvicorn
-      - MCP Python SDK
-      - Transformers
-
-  features:
-    - "LLM chat endpoint"
-    - "MCP Streamable HTTP endpoint"
-    - "Distributed training-time prediction for Vista"
-    - "Distributed training-time prediction for Perlmutter"
-
-  api:
-    openapi_spec: docs/openapi.json
-    endpoints:
-      - method: GET
-        path: /health
-        description: "Service health check."
-      - method: GET
-        path: /
-        description: "Service metadata."
-      - method: GET
-        path: /about
-        description: "HTML overview page."
-      - method: POST
-        path: /chat
-        description: "LLM chat endpoint with tool routing."
-      - method: POST
-        path: /predict-gpu-time
-        description: "Direct distributed training-time prediction endpoint."
-      - method: POST
-        path: /mcp
-        description: "MCP Streamable HTTP endpoint."
-
-  auth:
-    application_level_auth: false
-    notes: "The current test deployment does not add application-level auth inside the service."
-
-  contact:
-    name: "Molang Wu"
-    affiliation: "Rutgers University"
-
-  license: MIT
+components:
+  - id: HPCMCPServerCPU
+    owner: Molang Wu
+    primaryThrust: core/AI4CI
+    name: HPC MCP Server CPU
+    status: ProductionRelease
+    website: https://hpcmcpservercpu.pods.icicleai.tapis.io/about
+    description: HPC-MCP is a service-based ICICLE software component that gives HPC users a natural-language interface to backend HPC utilities. The current release provides distributed LLM training-time prediction for Vista and Perlmutter through HTTP endpoints and MCP clients.
+    componentVersion: 0.1.0
+    targetIcicleRelease: None
+    licenseUrl: https://github.com/ICICLE-ai/hpc-mcp-server/blob/main/LICENSE
+    publicAccess: true
+    sourceCodeUrl: https://github.com/ICICLE-ai/hpc-mcp-server
+    containerImage: docker://ghcr.io/icicle-ai/hpc-mcp-server-cpu:0.1.0
+    codeReviewConducted: true
+    testsWritten: true
+    securityReviewConducted: false
+    biasAssessmentConducted: false
+    usageDocumentationAvailable: true
+    usageDocumentationUrl: https://github.com/ICICLE-ai/hpc-mcp-server/blob/main/README.md
+    developerDocumentationAvailable: true
+    developerDocumentationUrl: https://github.com/ICICLE-ai/hpc-mcp-server/tree/main/docs
+    trainingTutorialsAvailable: true
+    trainingTutorialsUrl: https://github.com/ICICLE-ai/hpc-mcp-server/blob/main/README.md#tutorials
+    usageMetricsCollected: false
