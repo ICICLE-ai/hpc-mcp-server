@@ -1,25 +1,27 @@
-components:
-  - id: HPCMCPServerCPU
-    owner: Molang Wu
-    primaryThrust: core/AI4CI
-    name: HPC MCP Server CPU
-    status: ProductionRelease
-    website: https://hpcmcpservercpu.pods.icicleai.tapis.io/about
-    description: HPC-MCP is a service-based ICICLE software component that gives HPC users a natural-language interface to backend HPC utilities. The current release provides distributed LLM training-time prediction for Vista and Perlmutter through HTTP endpoints and MCP clients.
-    componentVersion: 0.1.0
-    targetIcicleRelease: None
-    licenseUrl: https://github.com/ICICLE-ai/hpc-mcp-server/blob/main/LICENSE
-    publicAccess: true
-    sourceCodeUrl: https://github.com/ICICLE-ai/hpc-mcp-server
-    containerImage: docker://ghcr.io/icicle-ai/hpc-mcp-server-cpu:0.1.0
-    codeReviewConducted: true
-    testsWritten: true
-    securityReviewConducted: false
-    biasAssessmentConducted: false
-    usageDocumentationAvailable: true
-    usageDocumentationUrl: https://github.com/ICICLE-ai/hpc-mcp-server/blob/main/README.md
-    developerDocumentationAvailable: true
-    developerDocumentationUrl: https://github.com/ICICLE-ai/hpc-mcp-server/tree/main/docs
-    trainingTutorialsAvailable: true
-    trainingTutorialsUrl: https://github.com/ICICLE-ai/hpc-mcp-server/blob/main/README.md#tutorials
-    usageMetricsCollected: false
+- id: HPCMCPServerCPU:0.1.0
+  owner: Molang Wu
+  primaryThrust: core/AI4CI
+  name: HPC MCP Server CPU
+  status: ProductionRelease
+  website: https://hpcmcpservercpu.pods.icicleai.tapis.io/about
+  description: HPC-MCP is a service-based ICICLE software component that gives HPC users a natural-language interface to backend HPC utilities. The current release provides distributed LLM training-time prediction for Vista and Perlmutter through HTTP endpoints and MCP clients.
+  componentVersion: 0.1.0
+  targetIcicleRelease: "2026-09"
+  licenseUrl: https://github.com/ICICLE-ai/hpc-mcp-server/blob/main/LICENSE
+  publicAccess: true
+  sourceCodeUrl: https://github.com/ICICLE-ai/hpc-mcp-server
+  containerImage: docker://ghcr.io/icicle-ai/hpc-mcp-server-cpu:0.1.0
+  hasDependentComponents:                                                
+      - related_to: "LLMTrainingCostEstimator:0.0.1"
+        relationship_type: "DependsOn"
+  codeReviewConducted: true
+  testsWritten: true
+  securityReviewConducted: false
+  biasAssessmentConducted: false
+  usageDocumentationAvailable: true
+  usageDocumentationUrl: https://github.com/ICICLE-ai/hpc-mcp-server/blob/main/README.md
+  developerDocumentationAvailable: true
+  developerDocumentationUrl: https://github.com/ICICLE-ai/hpc-mcp-server/tree/main/docs
+  trainingTutorialsAvailable: true
+  trainingTutorialsUrl: #training catalog
+  usageMetricsCollected: false
